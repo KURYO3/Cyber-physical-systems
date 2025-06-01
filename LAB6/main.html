@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лабораторна 6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #00309e, #ac0032);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+            background-color: rgb(255, 255, 255);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        @media (min-width: 1024px) {
+            .container {
+                flex-direction: row;
+                align-items: stretch;
+            }
+        }
+        canvas {
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            flex-grow: 1;
+            width: 100%;
+            height: auto;
+            max-width: 600px;
+            max-height: 600px;
+        }
+        .controls {
+            flex-shrink: 0;
+            width: 100%;
+            max-width: 350px;
+            padding: 20px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+        .input-group label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 4px;
+        }
+        .input-group input[type="number"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            color: #2d3748;
+            transition: border-color 0.2s;
+        }
+        .input-group input[type="number"]:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+        }
+        .button {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .button-primary {
+            background-color: #4299e1;
+            color: white;
+        }
+        .button-primary:hover {
+            background-color: #3182ce;
+            transform: translateY(-1px);
+        }
+        .button-secondary {
+            background-color: #a0aec0;
+            color: white;
+        }
+        .button-secondary:hover {
+            background-color: #718096;
+            transform: translateY(-1px);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .legend-color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="container lg:flex-row flex-col rounded-xl shadow-lg bg-white p-8">
+        <div class="controls flex flex-col gap-6 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Параметри симуляції</h2>
+
+            <div class="input-group flex flex-col">
+                <label for="gridSize" class="text-sm">Розмір сітки:</label>
+                <input type="number" id="gridSize" value="50" min="10" max="200" class="mt-1">
+            </div>
+
+            <div class="input-group flex flex-col">
+                <label for="initialInfected" class="text-sm">Початкова кількість інфікованих:</label>
+                <input type="number" id="initialInfected" value="5" min="1" class="mt-1">
+            </div>
+
+            <div class="input-group flex flex-col">
+                <label for="pInfect" class="text-sm">Ймовірність інфікування (0.0 - 1.0):</label>
+                <input type="number" id="pInfect" value="0.3" step="0.01" min="0" max="1" class="mt-1">
+            </div>
+
+            <div class="input-group flex flex-col">
+                <label for="tRecover" class="text-sm">Час до відновлення (кроків):</label>
+                <input type="number" id="tRecover" value="5" min="1" class="mt-1">
+            </div>
+
+            <div class="input-group flex flex-col">
+                <label for="numSteps" class="text-sm">Кількість кроків симуляції:</label>
+                <input type="number" id="numSteps" value="50" min="1" class="mt-1">
+            </div>
+
+            <div class="input-group flex flex-col">
+                <label for="animationSpeed" class="text-sm">Швидкість анімації (мс/крок):</label>
+                <input type="number" id="animationSpeed" value="500" min="100" max="5000" step="100" class="mt-1">
+            </div>
+
+            <div class="flex gap-4 mt-4">
+                <button id="startButton" class="button button-primary flex-1">Почати симуляцію</button>
+                <button id="stopButton" class="button button-secondary flex-1">Зупинити</button>
+            </div>
+            <button id="resetButton" class="button button-secondary w-full mt-2">Скинути</button>
+
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Легенда:</h3>
+                <div class="legend-item">
+                    <div class="legend-color-box" style="background-color: #8BC34A;"></div>
+                    <span>Здоровий</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color-box" style="background-color: #FFC107;"></div>
+                    <span>Інфікований</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color-box" style="background-color: #2196F3;"></div>
+                    <span>Відновлений</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="simulation-area flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg shadow-inner lg:ml-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4" id="simulationTitle">Симуляція епідемії</h2>
+            <canvas id="epidemicCanvas" class="rounded-lg shadow-md"></canvas>
+            <p class="text-gray-600 mt-4 text-center">
+                Крок симуляції: <span id="currentStep" class="font-bold">0</span> / <span id="totalSteps" class="font-bold">0</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const HEALTHY = 0;
+        const INFECTED = 1;
+        const RECOVERED = 2;
+
+        const COLORS = {
+            [HEALTHY]: '#8BC34A',
+            [INFECTED]: '#FFC107',
+            [RECOVERED]: '#2196F3'
+        };
+
+        const canvas = document.getElementById('epidemicCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const gridSizeInput = document.getElementById('gridSize');
+        const initialInfectedInput = document.getElementById('initialInfected');
+        const pInfectInput = document.getElementById('pInfect');
+        const tRecoverInput = document.getElementById('tRecover');
+        const numStepsInput = document.getElementById('numSteps');
+        const animationSpeedInput = document.getElementById('animationSpeed');
+
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const resetButton = document.getElementById('resetButton');
+
+        const currentStepSpan = document.getElementById('currentStep');
+        const totalStepsSpan = document.getElementById('totalSteps');
+
+        let grid = [];
+        let infectionTimer = [];
+        let simulationInterval = null;
+        let currentStep = 0;
+        let maxSteps = 0;
+        let cellSize = 0;
+        let gridSize = 0;
+
+        function initializeGrid(size, initialInfectedCount) {
+            const newGrid = Array(size).fill(0).map(() => Array(size).fill(HEALTHY));
+            const newInfectionTimer = Array(size).fill(0).map(() => Array(size).fill(-1));
+
+            const allPositions = [];
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    allPositions.push({ r, c });
+                }
+            }
+
+            for (let i = allPositions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allPositions[i], allPositions[j]] = [allPositions[j], allPositions[i]];
+            }
+
+            for (let i = 0; i < initialInfectedCount && i < allPositions.length; i++) {
+                const { r, c } = allPositions[i];
+                newGrid[r][c] = INFECTED;
+                newInfectionTimer[r][c] = 0;
+            }
+            return [newGrid, newInfectionTimer];
+        }
+
+        function updateGrid(currentGrid, currentInfectionTimer, P_infect, T_recover) {
+            const size = currentGrid.length;
+            const newGrid = JSON.parse(JSON.stringify(currentGrid));
+            const newInfectionTimer = JSON.parse(JSON.stringify(currentInfectionTimer));
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const currentState = currentGrid[r][c];
+
+                    if (currentState === HEALTHY) {
+                        let infectedNeighbors = 0;
+                        for (let dr = -1; dr <= 1; dr++) {
+                            for (let dc = -1; dc <= 1; dc++) {
+                                if (dr === 0 && dc === 0) continue;
+
+                                const nr = r + dr;
+                                const nc = c + dc;
+
+                                if (nr >= 0 && nr < size && nc >= 0 && nc < size) {
+                                    if (currentGrid[nr][nc] === INFECTED) {
+                                        infectedNeighbors++;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (infectedNeighbors > 0 && Math.random() < P_infect) {
+                            newGrid[r][c] = INFECTED;
+                            newInfectionTimer[r][c] = 0;
+                        }
+                    } else if (currentState === INFECTED) {
+                        newInfectionTimer[r][c]++;
+                        if (newInfectionTimer[r][c] >= T_recover) {
+                            newGrid[r][c] = RECOVERED;
+                            newInfectionTimer[r][c] = -1;
+                        }
+                    }
+                }
+            }
+            return [newGrid, newInfectionTimer];
+        }
+
+        function drawGrid(currentGrid, context, cellPxSize) {
+            const size = currentGrid.length;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const state = currentGrid[r][c];
+                    context.fillStyle = COLORS[state];
+                    context.fillRect(c * cellPxSize, r * cellPxSize, cellPxSize, cellPxSize);
+                    context.strokeStyle = '#e2e8f0';
+                    context.strokeRect(c * cellPxSize, r * cellPxSize, cellPxSize, cellPxSize);
+                }
+            }
+        }
+
+        function animate() {
+            if (currentStep < maxSteps) {
+                const P_infect = parseFloat(pInfectInput.value);
+                const T_recover = parseInt(tRecoverInput.value);
+
+                [grid, infectionTimer] = updateGrid(grid, infectionTimer, P_infect, T_recover);
+                drawGrid(grid, ctx, cellSize);
+
+                currentStep++;
+                currentStepSpan.textContent = currentStep;
+
+                simulationInterval = setTimeout(animate, parseInt(animationSpeedInput.value));
+            } else {
+                stopSimulation();
+                alert('Симуляція завершена!');
+            }
+        }
+
+        function startSimulation() {
+            stopSimulation();
+            resetSimulation(false);
+
+            maxSteps = parseInt(numStepsInput.value);
+            totalStepsSpan.textContent = maxSteps;
+            currentStep = 0;
+            currentStepSpan.textContent = currentStep;
+
+            animate();
+            startButton.disabled = true;
+            resetButton.disabled = true;
+            stopButton.disabled = false;
+        }
+
+        function stopSimulation() {
+            clearTimeout(simulationInterval);
+            simulationInterval = null;
+            startButton.disabled = false;
+            resetButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        function resetSimulation(shouldDraw = true) {
+            stopSimulation();
+
+            gridSize = parseInt(gridSizeInput.value);
+            const initialInfectedCount = parseInt(initialInfectedInput.value);
+
+            if (gridSize <= 0 || initialInfectedCount <= 0 || initialInfectedCount > gridSize * gridSize) {
+                alert('Будь ласка, введіть дійсні параметри для розміру сітки та початкової кількості інфікованих.');
+                return;
+            }
+
+            const canvasSize = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.7, 600);
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            cellSize = canvasSize / gridSize;
+
+            [grid, infectionTimer] = initializeGrid(gridSize, initialInfectedCount);
+            currentStep = 0;
+            currentStepSpan.textContent = currentStep;
+            maxSteps = parseInt(numStepsInput.value);
+            totalStepsSpan.textContent = maxSteps;
+
+            if (shouldDraw) {
+                drawGrid(grid, ctx, cellSize);
+            }
+        }
+
+        startButton.addEventListener('click', startSimulation);
+        stopButton.addEventListener('click', stopSimulation);
+        resetButton.addEventListener('click', () => resetSimulation(true));
+
+        window.onload = () => {
+            resetSimulation(true);
+            stopButton.disabled = true;
+        };
+
+        window.addEventListener('resize', () => {
+            resetSimulation(true);
+        });
+    </script>
+</body>
+</html>
